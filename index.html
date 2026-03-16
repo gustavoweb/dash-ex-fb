@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Estoque de Carros Usados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --surface2: #2e2e2e;
+    --accent: #f07820;
+    --accent2: #ffa94d;
+    --accent3: #ffe0b2;
+    --text: #f0f0f0;
+    --text-muted: #999;
+    --border: #3a3a3a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #e8e8e8;
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .dashboard {
+    background: var(--bg);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1300px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--text); letter-spacing: 0.5px;
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .filter-label { font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 30px 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Barlow', sans-serif;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+
+  /* BODY */
+  .body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .left-panel { padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 16px; }
+  .right-panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* KPIs */
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kpi-card {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 16px 14px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 700;
+    color: var(--text); line-height: 1;
+  }
+  .kpi-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1.2px; text-transform: uppercase; margin-top: 6px; }
+
+  /* TABLE */
+  .table-section { background: var(--surface); border-radius: 8px; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text); padding: 14px 16px 10px;
+  }
+  .table-wrapper { overflow-y: auto; max-height: 300px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--accent); }
+  thead th {
+    text-align: left; padding: 9px 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: #fff; white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 8px 12px; font-size: 12px; color: var(--text); }
+  .scrollbar-style::-webkit-scrollbar { width: 6px; }
+  .scrollbar-style::-webkit-scrollbar-track { background: var(--surface); }
+  .scrollbar-style::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* CHARTS */
+  .chart-card { background: var(--surface); border-radius: 8px; padding: 14px 16px; }
+  .chart-card canvas { width: 100% !important; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* TREEMAP */
+  .treemap-container { display: flex; gap: 4px; height: 90px; margin-top: 8px; border-radius: 6px; overflow: hidden; }
+  .treemap-block {
+    display: flex; flex-direction: column;
+    justify-content: flex-end; padding: 8px;
+    cursor: pointer; transition: filter 0.2s;
+    border-radius: 4px;
+  }
+  .treemap-block:hover { filter: brightness(1.15); }
+  .treemap-label { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; color: #fff; }
+  .treemap-val { font-size: 11px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .by-qty { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; float: right; }
+
+  .legend-row { display: flex; gap: 14px; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon"></div>
+      <h1>Dashboard de Estoque — Carros Usados</h1>
+    </div>
+    <div class="header-right">
+      <span class="filter-label">Filtrar por Marca</span>
+      <select class="filter-select" id="filterMarca" onchange="applyFilter()">
+        <option value="Todas">Todas</option>
+        <option value="Honda">Honda</option>
+        <option value="Hyundai">Hyundai</option>
+        <option value="Fiat">Fiat</option>
+        <option value="Volkswagen">Volkswagen</option>
+        <option value="Toyota">Toyota</option>
+        <option value="Chevrolet">Chevrolet</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+    <!-- LEFT -->
+    <div class="left-panel">
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-total">100</div>
+          <div class="kpi-label">Qtd. Veículos</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-preco">R$ 71k</div>
+          <div class="kpi-label">Preço Médio</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-km">84,7k</div>
+          <div class="kpi-label">KM Médio</div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-section">
+        <div class="section-title">Desempenho por Modelo</div>
+        <div class="table-wrapper scrollbar-style">
+          <table id="mainTable">
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th>Preço Médio</th>
+                <th>KM Médio</th>
+                <th>Qtd.</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-panel">
+      <!-- Bar chart -->
+      <div class="chart-card">
+        <div class="section-title">Preço Médio por Marca (R$)</div>
+        <canvas id="barChart" height="160"></canvas>
+      </div>
+
+      <!-- Donut + Bar charts row -->
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="section-title">Combustível</div>
+          <canvas id="donutChart" height="130"></canvas>
+          <div class="legend-row" id="donutLegend"></div>
+        </div>
+        <div class="chart-card">
+          <div class="section-title">Ano de Fabricação</div>
+          <canvas id="anoChart" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Treemap -->
+      <div class="chart-card">
+        <div class="section-title">Tipo de Veículo <span class="by-qty">por quantidade</span></div>
+        <div class="treemap-container" id="treemap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// RAW DATA
+const rawData = [
+  {ID:1,Marca:"Toyota",Modelo:"Corolla Cross",Tipo:"SUV",Ano:2020,Quilometragem:75000,Combustivel:"Gasolina",Preco_A_Vista:95820},
+  {ID:2,Marca:"Chevrolet",Modelo:"Tracker",Tipo:"SUV",Ano:2021,Quilometragem:45000,Combustivel:"Flex",Preco_A_Vista:88500},
+  {ID:3,Marca:"Chevrolet",Modelo:"Tracker",Tipo:"SUV",Ano:2019,Quilometragem:92000,Combustivel:"Flex",Preco_A_Vista:78300},
+  {ID:4,Marca:"Honda",Modelo:"City",Tipo:"Sedan",Ano:2018,Quilometragem:110000,Combustivel:"Flex",Preco_A_Vista:58900},
+  {ID:5,Marca:"Fiat",Modelo:"Argo",Tipo:"Hatch",Ano:2022,Quilometragem:23000,Combustivel:"Flex",Preco_A_Vista:72400},
+  {ID:6,Marca:"Volkswagen",Modelo:"Polo",Tipo:"Hatch",Ano:2021,Quilometragem:38000,Combustivel:"Gasolina",Preco_A_Vista:83200},
+  {ID:7,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2020,Quilometragem:55000,Combustivel:"Flex",Preco_A_Vista:62100},
+  {ID:8,Marca:"Hyundai",Modelo:"Creta",Tipo:"SUV",Ano:2021,Quilometragem:41000,Combustivel:"Gasolina",Preco_A_Vista:104500},
+  {ID:9,Marca:"Fiat",Modelo:"Cronos",Tipo:"Sedan",Ano:2019,Quilometragem:88000,Combustivel:"Flex",Preco_A_Vista:53400},
+  {ID:10,Marca:"Toyota",Modelo:"Yaris",Tipo:"Hatch",Ano:2020,Quilometragem:62000,Combustivel:"Gasolina",Preco_A_Vista:69800},
+  {ID:11,Marca:"Honda",Modelo:"Civic",Tipo:"Sedan",Ano:2019,Quilometragem:95000,Combustivel:"Gasolina",Preco_A_Vista:85400},
+  {ID:12,Marca:"Volkswagen",Modelo:"Gol",Tipo:"Hatch",Ano:2018,Quilometragem:120000,Combustivel:"Flex",Preco_A_Vista:42100},
+  {ID:13,Marca:"Fiat",Modelo:"Mobi",Tipo:"Hatch",Ano:2021,Quilometragem:30000,Combustivel:"Flex",Preco_A_Vista:46200},
+  {ID:14,Marca:"Hyundai",Modelo:"i30",Tipo:"Sedan",Ano:2017,Quilometragem:130000,Combustivel:"Gasolina",Preco_A_Vista:49800},
+  {ID:15,Marca:"Honda",Modelo:"HR-V",Tipo:"SUV",Ano:2020,Quilometragem:68000,Combustivel:"Gasolina",Preco_A_Vista:96300},
+  {ID:16,Marca:"Chevrolet",Modelo:"Onix",Tipo:"Hatch",Ano:2022,Quilometragem:18000,Combustivel:"Flex",Preco_A_Vista:74600},
+  {ID:17,Marca:"Volkswagen",Modelo:"T-Cross",Tipo:"SUV",Ano:2021,Quilometragem:44000,Combustivel:"Gasolina",Preco_A_Vista:98700},
+  {ID:18,Marca:"Fiat",Modelo:"Pulse",Tipo:"SUV",Ano:2022,Quilometragem:25000,Combustivel:"Flex",Preco_A_Vista:103200},
+  {ID:19,Marca:"Toyota",Modelo:"Corolla",Tipo:"Sedan",Ano:2020,Quilometragem:70000,Combustivel:"Gasolina",Preco_A_Vista:112000},
+  {ID:20,Marca:"Hyundai",Modelo:"HB20S",Tipo:"Sedan",Ano:2019,Quilometragem:78000,Combustivel:"Flex",Preco_A_Vista:55700},
+  {ID:21,Marca:"Honda",Modelo:"Fit",Tipo:"Hatch",Ano:2018,Quilometragem:105000,Combustivel:"Flex",Preco_A_Vista:54200},
+  {ID:22,Marca:"Chevrolet",Modelo:"S10",Tipo:"SUV",Ano:2019,Quilometragem:88000,Combustivel:"Flex",Preco_A_Vista:89400},
+  {ID:23,Marca:"Volkswagen",Modelo:"Virtus",Tipo:"Sedan",Ano:2021,Quilometragem:42000,Combustivel:"Flex",Preco_A_Vista:79800},
+  {ID:24,Marca:"Fiat",Modelo:"Strada",Tipo:"SUV",Ano:2020,Quilometragem:65000,Combustivel:"Flex",Preco_A_Vista:76300},
+  {ID:25,Marca:"Hyundai",Modelo:"Tucson",Tipo:"SUV",Ano:2018,Quilometragem:100000,Combustivel:"Gasolina",Preco_A_Vista:91200},
+  {ID:26,Marca:"Honda",Modelo:"WR-V",Tipo:"SUV",Ano:2021,Quilometragem:35000,Combustivel:"Gasolina",Preco_A_Vista:87600},
+  {ID:27,Marca:"Toyota",Modelo:"SW4",Tipo:"SUV",Ano:2018,Quilometragem:115000,Combustivel:"Gasolina",Preco_A_Vista:128000},
+  {ID:28,Marca:"Fiat",Modelo:"Toro",Tipo:"SUV",Ano:2021,Quilometragem:48000,Combustivel:"Flex",Preco_A_Vista:115400},
+  {ID:29,Marca:"Volkswagen",Modelo:"Fox",Tipo:"Hatch",Ano:2015,Quilometragem:147000,Combustivel:"Flex",Preco_A_Vista:35400},
+  {ID:30,Marca:"Hyundai",Modelo:"Elantra",Tipo:"Sedan",Ano:2017,Quilometragem:128000,Combustivel:"Gasolina",Preco_A_Vista:57800},
+  {ID:31,Marca:"Honda",Modelo:"City",Tipo:"Sedan",Ano:2020,Quilometragem:58000,Combustivel:"Flex",Preco_A_Vista:72300},
+  {ID:32,Marca:"Chevrolet",Modelo:"Spin",Tipo:"Sedan",Ano:2018,Quilometragem:110000,Combustivel:"Flex",Preco_A_Vista:61500},
+  {ID:33,Marca:"Fiat",Modelo:"Siena",Tipo:"Sedan",Ano:2014,Quilometragem:143000,Combustivel:"Flex",Preco_A_Vista:36800},
+  {ID:34,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2022,Quilometragem:20000,Combustivel:"Flex",Preco_A_Vista:76200},
+  {ID:35,Marca:"Toyota",Modelo:"Etios",Tipo:"Hatch",Ano:2016,Quilometragem:135000,Combustivel:"Flex",Preco_A_Vista:44900},
+  {ID:36,Marca:"Volkswagen",Modelo:"Saveiro",Tipo:"Hatch",Ano:2019,Quilometragem:82000,Combustivel:"Flex",Preco_A_Vista:68700},
+  {ID:37,Marca:"Honda",Modelo:"Accord",Tipo:"Sedan",Ano:2016,Quilometragem:140000,Combustivel:"Gasolina",Preco_A_Vista:79400},
+  {ID:38,Marca:"Hyundai",Modelo:"Creta",Tipo:"SUV",Ano:2019,Quilometragem:80000,Combustivel:"Gasolina",Preco_A_Vista:88700},
+  {ID:39,Marca:"Fiat",Modelo:"Palio",Tipo:"Hatch",Ano:2013,Quilometragem:147500,Combustivel:"Flex",Preco_A_Vista:35312},
+  {ID:40,Marca:"Chevrolet",Modelo:"Cruze",Tipo:"Sedan",Ano:2019,Quilometragem:74000,Combustivel:"Gasolina",Preco_A_Vista:89200},
+  {ID:41,Marca:"Volkswagen",Modelo:"Golf",Tipo:"Hatch",Ano:2020,Quilometragem:50000,Combustivel:"Gasolina",Preco_A_Vista:112000},
+  {ID:42,Marca:"Toyota",Modelo:"RAV4",Tipo:"SUV",Ano:2019,Quilometragem:85000,Combustivel:"Gasolina",Preco_A_Vista:118500},
+  {ID:43,Marca:"Honda",Modelo:"HR-V",Tipo:"SUV",Ano:2022,Quilometragem:22000,Combustivel:"Gasolina",Preco_A_Vista:108300},
+  {ID:44,Marca:"Hyundai",Modelo:"Azera",Tipo:"Sedan",Ano:2015,Quilometragem:138000,Combustivel:"Gasolina",Preco_A_Vista:58900},
+  {ID:45,Marca:"Fiat",Modelo:"Uno",Tipo:"Hatch",Ano:2012,Quilometragem:145000,Combustivel:"Flex",Preco_A_Vista:36200},
+  {ID:46,Marca:"Chevrolet",Modelo:"Cobalt",Tipo:"Sedan",Ano:2017,Quilometragem:120000,Combustivel:"Flex",Preco_A_Vista:46700},
+  {ID:47,Marca:"Volkswagen",Modelo:"Jetta",Tipo:"Sedan",Ano:2018,Quilometragem:95000,Combustivel:"Gasolina",Preco_A_Vista:84300},
+  {ID:48,Marca:"Hyundai",Modelo:"Veloster",Tipo:"Hatch",Ano:2016,Quilometragem:132000,Combustivel:"Gasolina",Preco_A_Vista:64800},
+  {ID:49,Marca:"Toyota",Modelo:"Hilux",Tipo:"SUV",Ano:2020,Quilometragem:72000,Combustivel:"Gasolina",Preco_A_Vista:126400},
+  {ID:50,Marca:"Honda",Modelo:"Civic",Tipo:"Sedan",Ano:2021,Quilometragem:38000,Combustivel:"Gasolina",Preco_A_Vista:102800},
+  {ID:51,Marca:"Fiat",Modelo:"Bravo",Tipo:"Hatch",Ano:2016,Quilometragem:128000,Combustivel:"Flex",Preco_A_Vista:48300},
+  {ID:52,Marca:"Volkswagen",Modelo:"Fusca",Tipo:"Hatch",Ano:2014,Quilometragem:135000,Combustivel:"Gasolina",Preco_A_Vista:58900},
+  {ID:53,Marca:"Chevrolet",Modelo:"Prisma",Tipo:"Sedan",Ano:2018,Quilometragem:105000,Combustivel:"Flex",Preco_A_Vista:52400},
+  {ID:54,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2021,Quilometragem:32000,Combustivel:"Flex",Preco_A_Vista:68400},
+  {ID:55,Marca:"Honda",Modelo:"Fit",Tipo:"Hatch",Ano:2021,Quilometragem:28000,Combustivel:"Flex",Preco_A_Vista:73800},
+  {ID:56,Marca:"Toyota",Modelo:"Prius",Tipo:"Sedan",Ano:2019,Quilometragem:88000,Combustivel:"Gasolina",Preco_A_Vista:94700},
+  {ID:57,Marca:"Fiat",Modelo:"Doblo",Tipo:"Sedan",Ano:2017,Quilometragem:118000,Combustivel:"Flex",Preco_A_Vista:54600},
+  {ID:58,Marca:"Volkswagen",Modelo:"Polo",Tipo:"Hatch",Ano:2022,Quilometragem:15000,Combustivel:"Gasolina",Preco_A_Vista:97800},
+  {ID:59,Marca:"Hyundai",Modelo:"Sonata",Tipo:"Sedan",Ano:2016,Quilometragem:140000,Combustivel:"Gasolina",Preco_A_Vista:67300},
+  {ID:60,Marca:"Honda",Modelo:"WR-V",Tipo:"SUV",Ano:2019,Quilometragem:78000,Combustivel:"Gasolina",Preco_A_Vista:74200},
+  {ID:61,Marca:"Chevrolet",Modelo:"Equinox",Tipo:"SUV",Ano:2020,Quilometragem:62000,Combustivel:"Gasolina",Preco_A_Vista:112000},
+  {ID:62,Marca:"Volkswagen",Modelo:"Amarok",Tipo:"SUV",Ano:2019,Quilometragem:90000,Combustivel:"Gasolina",Preco_A_Vista:128487},
+  {ID:63,Marca:"Fiat",Modelo:"Linea",Tipo:"Sedan",Ano:2015,Quilometragem:133000,Combustivel:"Flex",Preco_A_Vista:44800},
+  {ID:64,Marca:"Hyundai",Modelo:"Creta",Tipo:"SUV",Ano:2022,Quilometragem:18000,Combustivel:"Gasolina",Preco_A_Vista:118300},
+  {ID:65,Marca:"Toyota",Modelo:"Corolla Cross",Tipo:"SUV",Ano:2022,Quilometragem:20000,Combustivel:"Gasolina",Preco_A_Vista:122000},
+  {ID:66,Marca:"Honda",Modelo:"City",Tipo:"Sedan",Ano:2022,Quilometragem:15000,Combustivel:"Flex",Preco_A_Vista:94500},
+  {ID:67,Marca:"Fiat",Modelo:"Toro",Tipo:"SUV",Ano:2022,Quilometragem:20930,Combustivel:"Flex",Preco_A_Vista:122000},
+  {ID:68,Marca:"Volkswagen",Modelo:"Nivus",Tipo:"SUV",Ano:2021,Quilometragem:40000,Combustivel:"Gasolina",Preco_A_Vista:102400},
+  {ID:69,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2019,Quilometragem:72000,Combustivel:"Flex",Preco_A_Vista:52800},
+  {ID:70,Marca:"Chevrolet",Modelo:"Montana",Tipo:"SUV",Ano:2021,Quilometragem:48000,Combustivel:"Flex",Preco_A_Vista:74800},
+  {ID:71,Marca:"Honda",Modelo:"Civic",Tipo:"Sedan",Ano:2017,Quilometragem:125000,Combustivel:"Gasolina",Preco_A_Vista:73400},
+  {ID:72,Marca:"Toyota",Modelo:"Yaris",Tipo:"Sedan",Ano:2021,Quilometragem:38000,Combustivel:"Gasolina",Preco_A_Vista:82300},
+  {ID:73,Marca:"Fiat",Modelo:"Argo",Tipo:"Hatch",Ano:2021,Quilometragem:35000,Combustivel:"Flex",Preco_A_Vista:64200},
+  {ID:74,Marca:"Hyundai",Modelo:"ix35",Tipo:"SUV",Ano:2016,Quilometragem:138000,Combustivel:"Flex",Preco_A_Vista:62400},
+  {ID:75,Marca:"Volkswagen",Modelo:"Up",Tipo:"Hatch",Ano:2018,Quilometragem:92000,Combustivel:"Gasolina",Preco_A_Vista:46800},
+  {ID:76,Marca:"Honda",Modelo:"HR-V",Tipo:"SUV",Ano:2018,Quilometragem:108000,Combustivel:"Gasolina",Preco_A_Vista:82400},
+  {ID:77,Marca:"Fiat",Modelo:"Cronos",Tipo:"Sedan",Ano:2021,Quilometragem:42000,Combustivel:"Flex",Preco_A_Vista:68800},
+  {ID:78,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2017,Quilometragem:118000,Combustivel:"Flex",Preco_A_Vista:44200},
+  {ID:79,Marca:"Toyota",Modelo:"Corolla",Tipo:"Sedan",Ano:2018,Quilometragem:102000,Combustivel:"Gasolina",Preco_A_Vista:98400},
+  {ID:80,Marca:"Chevrolet",Modelo:"Onix Plus",Tipo:"Sedan",Ano:2020,Quilometragem:68000,Combustivel:"Flex",Preco_A_Vista:74200},
+  {ID:81,Marca:"Volkswagen",Modelo:"T-Cross",Tipo:"SUV",Ano:2022,Quilometragem:18000,Combustivel:"Gasolina",Preco_A_Vista:116800},
+  {ID:82,Marca:"Honda",Modelo:"CR-V",Tipo:"SUV",Ano:2019,Quilometragem:78000,Combustivel:"Gasolina",Preco_A_Vista:118200},
+  {ID:83,Marca:"Fiat",Modelo:"Punto",Tipo:"Hatch",Ano:2014,Quilometragem:142000,Combustivel:"Flex",Preco_A_Vista:38600},
+  {ID:84,Marca:"Hyundai",Modelo:"Creta",Tipo:"SUV",Ano:2020,Quilometragem:58000,Combustivel:"Gasolina",Preco_A_Vista:96400},
+  {ID:85,Marca:"Volkswagen",Modelo:"Voyage",Tipo:"Sedan",Ano:2016,Quilometragem:138000,Combustivel:"Flex",Preco_A_Vista:41200},
+  {ID:86,Marca:"Toyota",Modelo:"RAV4",Tipo:"SUV",Ano:2021,Quilometragem:42000,Combustivel:"Gasolina",Preco_A_Vista:124500},
+  {ID:87,Marca:"Honda",Modelo:"City",Tipo:"Sedan",Ano:2019,Quilometragem:88000,Combustivel:"Flex",Preco_A_Vista:63800},
+  {ID:88,Marca:"Fiat",Modelo:"Mobi",Tipo:"Hatch",Ano:2022,Quilometragem:12000,Combustivel:"Flex",Preco_A_Vista:52400},
+  {ID:89,Marca:"Hyundai",Modelo:"HB20S",Tipo:"Sedan",Ano:2021,Quilometragem:35000,Combustivel:"Flex",Preco_A_Vista:68700},
+  {ID:90,Marca:"Chevrolet",Modelo:"Meriva",Tipo:"Hatch",Ano:2013,Quilometragem:145000,Combustivel:"Flex",Preco_A_Vista:38400},
+  {ID:91,Marca:"Volkswagen",Modelo:"Polo",Tipo:"Hatch",Ano:2019,Quilometragem:72000,Combustivel:"Gasolina",Preco_A_Vista:74200},
+  {ID:92,Marca:"Toyota",Modelo:"Hilux",Tipo:"SUV",Ano:2022,Quilometragem:25000,Combustivel:"Gasolina",Preco_A_Vista:128200},
+  {ID:93,Marca:"Honda",Modelo:"Accord",Tipo:"Sedan",Ano:2018,Quilometragem:92000,Combustivel:"Gasolina",Preco_A_Vista:94600},
+  {ID:94,Marca:"Fiat",Modelo:"Argo",Tipo:"Hatch",Ano:2020,Quilometragem:58000,Combustivel:"Flex",Preco_A_Vista:58700},
+  {ID:95,Marca:"Hyundai",Modelo:"Tucson",Tipo:"SUV",Ano:2020,Quilometragem:62000,Combustivel:"Gasolina",Preco_A_Vista:108900},
+  {ID:96,Marca:"Volkswagen",Modelo:"Golf",Tipo:"Hatch",Ano:2022,Quilometragem:20000,Combustivel:"Gasolina",Preco_A_Vista:124800},
+  {ID:97,Marca:"Chevrolet",Modelo:"Captiva",Tipo:"SUV",Ano:2018,Quilometragem:98000,Combustivel:"Gasolina",Preco_A_Vista:82400},
+  {ID:98,Marca:"Honda",Modelo:"CR-V",Tipo:"SUV",Ano:2021,Quilometragem:32000,Combustivel:"Gasolina",Preco_A_Vista:128000},
+  {ID:99,Marca:"Fiat",Modelo:"Pulse",Tipo:"SUV",Ano:2021,Quilometragem:38000,Combustivel:"Flex",Preco_A_Vista:98400},
+  {ID:100,Marca:"Hyundai",Modelo:"HB20",Tipo:"Hatch",Ano:2018,Quilometragem:105000,Combustivel:"Flex",Preco_A_Vista:46800}
+];
+
+const ACCENT = '#f07820';
+const ACCENT2 = '#ffa94d';
+const ACCENT3 = '#ffe0b2';
+const SURFACE2 = '#3a3a3a';
+
+let filteredData = [...rawData];
+let barChart, donutChart, anoChart;
+
+function applyFilter() {
+  const marca = document.getElementById('filterMarca').value;
+  filteredData = marca === 'Todas' ? [...rawData] : rawData.filter(d => d.Marca === marca);
+  updateAll();
+}
+
+function fmtPrice(v) {
+  if (v >= 1000) return 'R$ ' + (v/1000).toFixed(0) + 'k';
+  return 'R$ ' + v;
+}
+function fmtKm(v) { return (v/1000).toFixed(1) + 'k'; }
+
+function updateKPIs() {
+  const total = filteredData.length;
+  const avgPreco = filteredData.reduce((s,d)=>s+d.Preco_A_Vista,0)/total;
+  const avgKm = filteredData.reduce((s,d)=>s+d.Quilometragem,0)/total;
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-preco').textContent = fmtPrice(Math.round(avgPreco));
+  document.getElementById('kpi-km').textContent = fmtKm(avgKm);
+}
+
+function updateTable() {
+  const modelMap = {};
+  filteredData.forEach(d => {
+    if (!modelMap[d.Modelo]) modelMap[d.Modelo] = { precos:[], kms:[], count:0 };
+    modelMap[d.Modelo].precos.push(d.Preco_A_Vista);
+    modelMap[d.Modelo].kms.push(d.Quilometragem);
+    modelMap[d.Modelo].count++;
+  });
+  const rows = Object.entries(modelMap)
+    .map(([modelo, v]) => ({
+      modelo,
+      avgPreco: v.precos.reduce((s,x)=>s+x,0)/v.count,
+      avgKm: v.kms.reduce((s,x)=>s+x,0)/v.count,
+      count: v.count
+    }))
+    .sort((a,b) => b.avgPreco - a.avgPreco);
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.modelo}</td>
+      <td style="color:${ACCENT2}">R$ ${r.avgPreco.toLocaleString('pt-BR',{maximumFractionDigits:0})}</td>
+      <td>${r.avgKm.toLocaleString('pt-BR',{maximumFractionDigits:0})} km</td>
+      <td style="color:${ACCENT}">${r.count}</td>
+    </tr>
+  `).join('');
+}
+
+function updateBarChart() {
+  const marcas = ['Honda','Hyundai','Fiat','Volkswagen','Toyota','Chevrolet'];
+  const avgs = marcas.map(m => {
+    const d = filteredData.filter(x=>x.Marca===m);
+    if (!d.length) return 0;
+    return Math.round(d.reduce((s,x)=>s+x.Preco_A_Vista,0)/d.length);
+  });
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: marcas,
+      datasets: [{
+        data: avgs,
+        backgroundColor: avgs.map((v,i) => i % 2 === 0 ? ACCENT : ACCENT2),
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' R$ ' + ctx.raw.toLocaleString('pt-BR') }
+      }},
+      scales: {
+        x: { grid: { color: '#333' }, ticks: { color: '#888', font:{size:10}, callback: v => 'R$'+(v/1000).toFixed(0)+'k' } },
+        y: { grid: { display: false }, ticks: { color: '#ccc', font:{size:12} } }
+      }
+    }
+  });
+}
+
+function updateDonut() {
+  const combMap = {};
+  filteredData.forEach(d => { combMap[d.Combustivel] = (combMap[d.Combustivel]||0)+1; });
+  const labels = Object.keys(combMap);
+  const values = Object.values(combMap);
+  const colors = [ACCENT, ACCENT2, ACCENT3, '#c95f00'];
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors.slice(0,labels.length), borderWidth: 0, hoverOffset: 4 }] },
+    options: {
+      cutout: '68%', responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${((ctx.raw/filteredData.length)*100).toFixed(0)}%` } }
+      }
+    }
+  });
+  // Legend
+  const leg = document.getElementById('donutLegend');
+  leg.innerHTML = labels.map((l,i) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      <span>${l}</span>
+    </div>
+  `).join('');
+}
+
+function updateAnoChart() {
+  const anoMap = {};
+  filteredData.forEach(d => { anoMap[d.Ano] = (anoMap[d.Ano]||0)+1; });
+  const anos = Object.keys(anoMap).sort();
+  const vals = anos.map(a => anoMap[a]);
+  if (anoChart) anoChart.destroy();
+  anoChart = new Chart(document.getElementById('anoChart'), {
+    type: 'bar',
+    data: {
+      labels: anos,
+      datasets: [{ data: vals, backgroundColor: ACCENT, borderRadius: 3, borderSkipped: false }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} veículos` } } },
+      scales: {
+        x: { grid:{display:false}, ticks:{color:'#888', font:{size:9}} },
+        y: { grid:{color:'#333'}, ticks:{color:'#888', font:{size:9}} }
+      }
+    }
+  });
+}
+
+function updateTreemap() {
+  const tipos = {Hatch:0, Sedan:0, SUV:0};
+  filteredData.forEach(d => { if(tipos[d.Tipo]!==undefined) tipos[d.Tipo]++; });
+  const total = filteredData.length;
+  const colors = { Hatch: ACCENT, Sedan: ACCENT2, SUV: ACCENT3 };
+  const textColors = { Hatch: '#fff', Sedan: '#fff', SUV: '#333' };
+  const container = document.getElementById('treemap');
+  container.innerHTML = Object.entries(tipos).sort((a,b)=>b[1]-a[1]).map(([tipo, count]) => {
+    const pct = (count/total*100).toFixed(0);
+    return `<div class="treemap-block" style="background:${colors[tipo]};flex:${count}"
+      title="${tipo}: ${count} veículos (${pct}%)">
+      <div class="treemap-label" style="color:${textColors[tipo]}">${tipo}</div>
+      <div class="treemap-val" style="color:${textColors[tipo]}">${count}.00</div>
+    </div>`;
+  }).join('');
+}
+
+function updateAll() {
+  updateKPIs();
+  updateTable();
+  updateBarChart();
+  updateDonut();
+  updateAnoChart();
+  updateTreemap();
+}
+
+Chart.defaults.color = '#999';
+Chart.defaults.font.family = "'Barlow', sans-serif";
+updateAll();
+</script>
+</body>
+</html>
